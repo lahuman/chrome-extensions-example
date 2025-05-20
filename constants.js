@@ -1,0 +1,1 @@
+const ALLOWED_URL = 'https://lahuman.github.io/'; // 확장 프로그램이 활성화될 특정 웹사이트 주소
