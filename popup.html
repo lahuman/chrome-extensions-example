@@ -4,12 +4,29 @@
   <title>토글 확장 프로그램</title>
   <link rel="stylesheet" href="popup.css">
   <meta charset="UTF-8">
-  <script src="constants.js"></script>  </head>
+  <script src="constants.js"></script>
 </head>
 <body>
   <h1>확장 프로그램 상태</h1>
-  <p id="status">상태: 로딩 중...</p> <button id="toggleButton">상태 변경</button> <div id="urlDisplay" class="hidden"> <p>현재 페이지 주소:</p>
+  <p id="status">상태: 로딩 중...</p>
+
+  <div id="intervalControls" class="hidden">
+    <label for="intervalSelect">갱신 주기: </label>
+    <select id="intervalSelect">
+      <option value="5000">5초</option>
+      <option value="10000">10초</option>
+      <option value="15000">15초</option>
+      <option value="20000">20초</option>
+      <option value="30000">30초</option>
+    </select>
+  </div>
+
+  <button id="toggleButton">상태 변경</button>
+
+  <div id="urlDisplay" class="hidden">
+    <p>현재 페이지 주소:</p>
     <p id="currentUrl"></p>
   </div>
-  <script src="popup.js"></script> </body>
+  <script src="popup.js"></script>
+</body>
 </html>

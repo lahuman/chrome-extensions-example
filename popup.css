@@ -19,6 +19,26 @@ h1 {
   color: #555;
 }
 
+/* New styles for interval controls */
+#intervalControls {
+  margin-bottom: 15px;
+  text-align: center; /* Align label and select box centrally */
+}
+
+#intervalControls label {
+  margin-right: 5px;
+  font-size: 0.9em;
+  color: #333;
+}
+
+#intervalControls select {
+  padding: 5px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  font-size: 0.9em;
+}
+
+
 button {
   background-color: #007bff; /* 파란색 배경 */
   border: none;
