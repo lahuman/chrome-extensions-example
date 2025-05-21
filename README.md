@@ -1,5 +1,8 @@
 # 간단 토글 크롬 확장 프로그램
 
+
+[![Chrome Extentions 동작 예시](http://img.youtube.com/vi/NT-xJ17T7y0/0.jpg)](http://www.youtube.com/watch?v=NT-xJ17T7y0 "Chrome Extentions 동작 예시")
+
 이 확장 프로그램은 특정 웹사이트(`https://lahuman.github.io/`)에서만 활성화되며, 사용자가 상태를 켜고 끌 수 있는 간단한 기능을 제공합니다. 확장 프로그램이 켜져 있을 때는 해당 웹사이트에서 10초마다 특정 버튼을 클릭하고, 현재 페이지에 상태 표시와 카운트다운을 보여줍니다.
 
 ## 기능
