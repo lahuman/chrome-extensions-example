@@ -93,65 +93,92 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+
+
+  // Helper function to send startClicking message and handle response/error
+  function sendStartClickingMessage(tabId, interval, stateKey) {
+    chrome.tabs.sendMessage(tabId, {
+      action: 'startClicking',
+      state: true,
+      interval: interval
+    }, function(response) {
+      if (chrome.runtime.lastError) {
+        console.warn(`콘텐츠 스크립트에 시작 메시지 전송 실패 (메시지 핸들러 내부):`, chrome.runtime.lastError.message);
+        statusElement.textContent = '오류: 스크립트 통신 실패';
+        // 실패 시 상태를 다시 '꺼짐'으로 되돌리고 UI 업데이트
+        chrome.storage.sync.set({ [stateKey]: false }, () => {
+            updateUI(false); // updateUI는 intervalSelect.disabled 상태도 처리
+        });
+      } else {
+        console.log('콘텐츠 스크립트 시작 메시지 전송 및 응답 수신 완료:', response);
+      }
+    });
+  }
+  
   toggleButton.addEventListener('click', function() {
     if (currentTabId === null || toggleButton.disabled) return;
 
     const stateKey = `state_${currentTabId}`;
     const intervalKey = `interval_${currentTabId}`;
-    // '켜기' 버튼을 누를 때 현재 select 박스에 설정된 값을 사용합니다.
-    // 이 시점에서 select 박스는 활성화되어 있어야 사용자 값을 읽을 수 있습니다.
     const selectedInterval = parseInt(intervalSelect.value);
 
     chrome.storage.sync.get({ [stateKey]: false }, function(data) {
       const oldState = data[stateKey];
       const newState = !oldState;
 
+      // 먼저 상태와 인터벌을 저장합니다.
       chrome.storage.sync.set({
         [stateKey]: newState,
-        [intervalKey]: selectedInterval // 켜질 때 현재 선택된 인터벌 값으로 저장
+        [intervalKey]: selectedInterval
       }, function() {
-        updateUI(newState); // UI 업데이트 (select 활성화/비활성화 포함)
+        updateUI(newState); // UI를 즉시 업데이트합니다.
         console.log('확장 프로그램 상태가', newState ? '켜짐' : '꺼짐', '으로 변경되었습니다.');
 
-        if (newState) {
-          // 상태가 '켜짐'으로 변경될 때의 로직
-          if (chrome.scripting) { //
-            chrome.scripting.executeScript({ //
-              target: { tabId: currentTabId }, //
-              files: ['content.js'] //
-            }, () => {
-              if (chrome.runtime.lastError) { //
-                console.error('콘텐츠 스크립트 삽입 오류:', chrome.runtime.lastError); //
-                statusElement.textContent = '오류: 스크립트 삽입 실패'; //
-                chrome.storage.sync.set({ [stateKey]: false }, () => updateUI(false)); //
-                return;
+        if (newState) { // 상태가 '켜짐'으로 변경될 때
+          // 1. content.js에 ping 보내서 이미 있는지 확인
+          chrome.tabs.sendMessage(currentTabId, { action: 'ping' }, function(response) {
+            if (chrome.runtime.lastError || !response || response.status !== 'pong') {
+              // 1-1. Ping 실패: content.js가 없거나 응답 없음 -> 삽입 시도
+              console.log('콘텐츠 스크립트 ping 실패 또는 응답 없음. 삽입 시도.');
+              if (chrome.scripting) {
+                chrome.scripting.executeScript({
+                  target: { tabId: currentTabId },
+                  files: ['content.js']
+                }, (injectionResults) => { // injectionResults 인자 추가
+                  if (chrome.runtime.lastError) {
+                    console.error('콘텐츠 스크립트 삽입 오류:', chrome.runtime.lastError.message);
+                    statusElement.textContent = '오류: 스크립트 삽입 실패';
+                    // 삽입 실패 시 상태를 다시 '꺼짐'으로 되돌림
+                    chrome.storage.sync.set({ [stateKey]: false }, () => updateUI(false));
+                    return;
+                  }
+                  if (injectionResults && injectionResults.length > 0) {
+                    console.log('콘텐츠 스크립트 삽입 성공.');
+                     // 삽입 성공 후 startClicking 메시지 전송
+                    sendStartClickingMessage(currentTabId, selectedInterval, stateKey);
+                  } else {
+                     // 이 경우는 거의 없지만, 삽입은 성공했으나 결과 배열이 비어있는 경우
+                     console.warn('콘텐츠 스크립트 삽입 결과가 비어있습니다.');
+                     // 필요하다면 오류 처리
+                  }
+                });
+              } else {
+                console.error('오류: chrome.scripting API를 사용할 수 없습니다.');
+                statusElement.textContent = '오류: 스크립트 API 사용 불가';
+                chrome.storage.sync.set({ [stateKey]: false }, () => updateUI(false));
               }
-              chrome.tabs.sendMessage(currentTabId, { //
-                action: 'startClicking', //
-                state: true, //
-                interval: selectedInterval // 선택된 인터벌 전달
-              }, function(response) {
-                if (chrome.runtime.lastError) { //
-                  console.warn('콘텐츠 스크립트에 시작 메시지 전송 실패:', chrome.runtime.lastError); //
-                  statusElement.textContent = '오류: 스크립트 통신 실패'; //
-                  chrome.storage.sync.set({ [stateKey]: false }, () => updateUI(false)); //
-                } else {
-                  console.log('콘텐츠 스크립트 시작 메시지 전송 완료'); //
-                }
-              });
-            });
-          } else {
-            console.error('오류: chrome.scripting API를 사용할 수 없습니다.'); //
-            statusElement.textContent = '오류: 스크립트 API 사용 불가'; //
-            chrome.storage.sync.set({ [stateKey]: false }, () => updateUI(false)); //
-          }
-        } else {
-          // 상태가 '꺼짐'으로 변경될 때의 로직
-          chrome.tabs.sendMessage(currentTabId, { action: 'stopClicking', state: false }, function(response) { //
-            if (chrome.runtime.lastError) { //
-              console.warn('콘텐츠 스크립트에 중지 메시지 전송 실패:', chrome.runtime.lastError); //
             } else {
-              console.log('콘텐츠 스크립트 중지 메시지 전송 완료'); //
+              // 1-2. Ping 성공: content.js 이미 존재함 -> startClicking 메시지만 전송
+              console.log('콘텐츠 스크립트 ping 성공. 이미 활성화되어 있음. startClicking 메시지 전송.');
+              sendStartClickingMessage(currentTabId, selectedInterval, stateKey);
+            }
+          });
+        } else { // 상태가 '꺼짐'으로 변경될 때
+          chrome.tabs.sendMessage(currentTabId, { action: 'stopClicking', state: false }, function(response) {
+            if (chrome.runtime.lastError) {
+              console.warn('콘텐츠 스크립트에 중지 메시지 전송 실패:', chrome.runtime.lastError.message);
+            } else {
+              console.log('콘텐츠 스크립트 중지 메시지 전송 완료');
             }
           });
         }

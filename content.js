@@ -162,8 +162,12 @@ chrome.runtime.onMessage.addListener(
       stopClicking(); // 기존 인터벌 중지
       startClicking(request.interval); // 새 인터벌로 시작
       sendResponse({ status: 'intervalUpdated' });
+    } else if (request.action === 'ping') { // 추가된 부분
+      console.log('콘텐츠 스크립트: Ping 수신');
+      sendResponse({ status: 'pong', scriptVersion: '1.0' }); // 응답하여 존재를 알림
+      return true; // 비동기 응답을 위해 true 반환해야 함
     }
-    return true; // 비동기 응답을 위해 true 반환
+
   }
 );
 
